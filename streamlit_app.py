@@ -2,6 +2,11 @@ import streamlit as st
 import joblib
 import pandas as pd
 from preprocess import clean_text
+import os
+if not os.path.exists("models/model.joblib"):
+    st.warning("Model not found — training model now...")
+    import train_model
+    st.success("✅ Model trained successfully! Please rerun the app.")
 
 st.set_page_config(page_title="Fake News Detector", layout="centered")
 st.title("📰 Fake News Detector using AI")
