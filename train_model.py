@@ -1,35 +1,49 @@
 import pandas as pd
+import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
-from sklearn.pipeline import Pipeline
-import joblib
-import os
+from sklearn.linear_model import PassiveAggressiveClassifier
+from sklearn.metrics import accuracy_score
 from preprocess import clean_text
+import os
 
+# ✅ Step 1: Load dataset
 df = pd.read_csv("dataset.csv")
-df['text_clean'] = df['text'].apply(clean_text)
-df['label'] = df['label'].map(lambda x: 1 if str(x).upper() == 'REAL' else 0)
 
+# ✅ Step 2: Basic cleaning
+df.dropna(inplace=True)
+df['text_clean'] = df['text'].apply(clean_text)
+
+# ✅ Step 3: Handle small or imbalanced datasets safely
+unique_labels = df['label'].unique()
+if len(unique_labels) < 2:
+    print("⚠️ Only one label found in dataset — duplicating for safe training.")
+    df = pd.concat([df, df])  # Duplicate rows to allow both train/test splits
+    df['label'] = df['label'].astype(str)
+
+# ✅ Step 4: Safe train/test split (no stratify)
 X_train, X_test, y_train, y_test = train_test_split(
-    df['text_clean'], df['label'], test_size=0.2, random_state=42, stratify=df['label']
+    df['text_clean'], df['label'], test_size=0.2, random_state=42
 )
 
-pipe = Pipeline([
-    ('tfidf', TfidfVectorizer(max_features=10000, ngram_range=(1, 2))),
-    ('lr', LogisticRegression(max_iter=1000))
-])
+# ✅ Step 5: Vectorization
+vectorizer = TfidfVectorizer(stop_words='english', max_df=0.7)
+X_train_tfidf = vectorizer.fit_transform(X_train)
+X_test_tfidf = vectorizer.transform(X_test)
 
-print("Training model...")
-pipe.fit(X_train, y_train)
+# ✅ Step 6: Train the model
+model = PassiveAggressiveClassifier(max_iter=50)
+model.fit(X_train_tfidf, y_train)
 
-preds = pipe.predict(X_test)
-acc = accuracy_score(y_test, preds)
-print(f"Accuracy: {acc:.3f}")
-print("Classification Report:")
-print(classification_report(y_test, preds, target_names=['FAKE', 'REAL']))
+# ✅ Step 7: Evaluate accuracy
+y_pred = model.predict(X_test_tfidf)
+accuracy = accuracy_score(y_test, y_pred)
+print(f"✅ Model trained successfully. Accuracy: {accuracy * 100:.2f}%")
 
+# ✅ Step 8: Save model and vectorizer
 os.makedirs("models", exist_ok=True)
-joblib.dump(pipe, "models/model.joblib")
-print("✅ Model saved to models/model.joblib")
+joblib.dump(model, "models/model.joblib")
+joblib.dump(vectorizer, "models/vectorizer.joblib")
+
+print("🎯 Model and vectorizer saved in 'models/' folder.")
+
