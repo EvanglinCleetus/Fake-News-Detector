@@ -41,9 +41,14 @@ accuracy = accuracy_score(y_test, y_pred)
 print(f"✅ Model trained successfully. Accuracy: {accuracy * 100:.2f}%")
 
 # ✅ Step 8: Save model and vectorizer
+import os
+import joblib
+
 os.makedirs("models", exist_ok=True)
 joblib.dump(model, "models/model.joblib")
 joblib.dump(vectorizer, "models/vectorizer.joblib")
+
+print("✅ Model and vectorizer saved successfully!")
 
 print("🎯 Model and vectorizer saved in 'models/' folder.")
 
